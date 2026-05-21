@@ -22,6 +22,7 @@ An unofficial Python API for Perplexity.ai that exposes search capabilities via 
 <img width="1894" height="989" alt="image" src="https://github.com/user-attachments/assets/4a495432-8305-4820-8b4a-d7e54986ba45" />
 
 ## Changelog
++ **2026-05-21**: v1.9.5 — Add agent-friendly MCP aliases for quick ask, web search, reasoning, and deep research; improve tool descriptions and tests.
 + **2026-03-10**: v1.9.4 — Refresh the supported model lineup: add GPT-5.4 / GPT-5.4 Thinking, remove GPT-5.2 and Grok 4.1 variants, and sync MCP, OpenAI model exposure, tests, and docs.
 + **2026-02-20**: v1.9.1 — Fix frontend version display: sync `package.json` version so admin UI shows correct `MANAGER_vX.X.X`.
 + **2026-02-20**: v1.9.0 — Playground file attachment improvements: clipboard image paste (Ctrl+V) support; image files now show inline thumbnail previews in the input area.
@@ -173,6 +174,18 @@ Configure multiple Perplexity account tokens to enable load balancing and high a
 }
 ```
 
+### MCP Tools
+
+| Tool | When to use |
+|------|-------------|
+| `perplexity_ask` | Quick general questions using low-cost auto mode |
+| `perplexity_search` | Current web search with Pro mode and web sources |
+| `perplexity_reason` | Multi-step reasoning with the default reasoning model |
+| `perplexity_research` | Slower, comprehensive deep research |
+| `search` | Parameterized auto/pro search with model, source, language, file, and fallback controls |
+| `research` | Parameterized reasoning/deep research with model, source, language, file, and fallback controls |
+| `list_models` | Inspect supported modes and model mappings |
+
 ## OpenAI Compatible Endpoints
 
 **Base URL:** `http://127.0.0.1:8000/v1`
@@ -244,7 +257,7 @@ perplexity/
 │   ├── __init__.py
 │   ├── main.py              # Entry point
 │   ├── app.py               # FastMCP app, auth, core logic
-│   ├── mcp.py               # MCP tools
+│   ├── mcp.py               # MCP tools and agent-friendly aliases
 │   ├── oai.py               # OpenAI compatible API
 │   ├── admin.py             # Admin endpoints
 │   ├── utils.py             # Server utils

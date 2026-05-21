@@ -183,8 +183,7 @@ class TestSearchMode:
         async with client:
             try:
                 result = await asyncio.wait_for(
-                    client.call_tool("search", arguments),
-                    timeout=CALL_TOOL_TIMEOUT
+                    client.call_tool("search", arguments), timeout=CALL_TOOL_TIMEOUT
                 )
             except asyncio.TimeoutError:
                 pytest.fail(f"search 调用超时 ({CALL_TOOL_TIMEOUT}s)，模型: {model_name}")
@@ -208,7 +207,9 @@ class TestSearchMode:
                     # 验证第一个来源的结构
                     first_source = sources[0]
                     assert "url" in first_source, "来源缺少 url 字段"
-                    print(f"console.log -> 第一个来源: {first_source.get('title', 'N/A')} - {first_source['url']}")
+                    print(
+                        f"console.log -> 第一个来源: {first_source.get('title', 'N/A')} - {first_source['url']}"
+                    )
             else:
                 # 记录错误信息
                 error_msg = tool_result.get("message", "未知错误")
@@ -247,8 +248,7 @@ class TestResearchMode:
         async with client:
             try:
                 result = await asyncio.wait_for(
-                    client.call_tool("research", arguments),
-                    timeout=CALL_TOOL_TIMEOUT
+                    client.call_tool("research", arguments), timeout=CALL_TOOL_TIMEOUT
                 )
             except asyncio.TimeoutError:
                 pytest.fail(f"research 调用超时 ({CALL_TOOL_TIMEOUT}s)，模型: {model_name}")
@@ -272,7 +272,9 @@ class TestResearchMode:
                     # 验证第一个来源的结构
                     first_source = sources[0]
                     assert "url" in first_source, "来源缺少 url 字段"
-                    print(f"console.log -> 第一个来源: {first_source.get('title', 'N/A')} - {first_source['url']}")
+                    print(
+                        f"console.log -> 第一个来源: {first_source.get('title', 'N/A')} - {first_source['url']}"
+                    )
             else:
                 # 记录错误信息
                 error_msg = tool_result.get("message", "未知错误")
@@ -294,7 +296,15 @@ class TestToolsAvailability:
             tool_names = [tool.name for tool in tools]
 
             # 验证预期的工具存在
-            expected_tools = ["list_models", "search", "research"]
+            expected_tools = [
+                "list_models",
+                "search",
+                "research",
+                "perplexity_ask",
+                "perplexity_search",
+                "perplexity_reason",
+                "perplexity_research",
+            ]
             for tool_name in expected_tools:
                 assert tool_name in tool_names, f"缺少预期的工具: {tool_name}"
                 print(f"console.log -> 工具 {tool_name} 存在")

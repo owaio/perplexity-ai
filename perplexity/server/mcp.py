@@ -1,6 +1,6 @@
 """
 MCP tools for Perplexity search.
-Provides list_models, search, research, and toggle_builtin_tools tools.
+Provides model discovery, parameterized search/research tools, and simple agent-friendly aliases.
 """
 
 import asyncio
@@ -19,9 +19,11 @@ except ImportError:
 
 # If mcp is None (e.g. testing env), create a dummy decorator
 if mcp is None:
+
     class DummyMCP:
         def tool(self, func):
             return func
+
     mcp = DummyMCP()
 
 
@@ -32,6 +34,22 @@ def list_models_tool() -> Dict[str, Any]:
         "model_mappings": MODEL_MAPPINGS,
         "labs_models": LABS_MODELS,
     }
+
+
+async def _run_query_async(
+    query: str,
+    mode: str,
+    model: Optional[str] = None,
+    sources: Optional[List[str]] = None,
+    language: str = "en-US",
+    incognito: bool = False,
+    files: Optional[Union[Dict[str, Any], Iterable[str]]] = None,
+    fallback_to_auto: bool = True,
+) -> Dict[str, Any]:
+    """Run the shared query pipeline without blocking the MCP event loop."""
+    return await asyncio.to_thread(
+        run_query, query, mode, model, sources, language, incognito, files, fallback_to_auto
+    )
 
 
 @mcp.tool
@@ -61,7 +79,9 @@ async def search(
     """
     Perplexity 快速搜索 - 用于获取实时网络信息和简单问题解答
 
-    ⚡ 特点: 速度快，适合需要实时信息的简单查询
+    适合需要最新网页信息、事实核查、新闻动态、资料检索和简短综合回答的场景。
+    如果只是普通问答且不需要 Pro 搜索，优先使用 perplexity_ask。
+    如果需要多步推理或深度调研，使用 research / perplexity_reason / perplexity_research。
 
     Args:
         query: 搜索问题 (清晰、具体的问题效果更好)
@@ -90,9 +110,8 @@ async def search(
     # 限制 search 只能使用 auto 或 pro 模式
     if mode not in ["auto", "pro"]:
         mode = "pro"
-    # 使用 asyncio.to_thread 避免阻塞事件循环
-    return await asyncio.to_thread(
-        run_query, query, mode, model, sources, language, incognito, files, fallback_to_auto
+    return await _run_query_async(
+        query, mode, model, sources, language, incognito, files, fallback_to_auto
     )
 
 
@@ -110,7 +129,9 @@ async def research(
     """
     Perplexity 深度研究 - 用于复杂问题分析和深度调研
 
-    🧠 特点: 使用推理模型，会进行多步思考，结果更全面准确，但耗时较长
+    适合复杂分析、方案比较、技术调研、学术资料整理和需要明确推理路径的问题。
+    普通实时搜索请使用 search / perplexity_search；日常简短问答请使用 perplexity_ask。
+    deep research 通常更慢，适合值得等待的综合研究任务。
 
     Args:
         query: 研究问题 (问题越具体，研究结果越有针对性)
@@ -141,9 +162,113 @@ async def research(
     # deep research 模式不支持指定 model
     if mode == "deep research":
         model = None
-    # 使用 asyncio.to_thread 避免阻塞事件循环
-    return await asyncio.to_thread(
-        run_query, query, mode, model, sources, language, incognito, files, fallback_to_auto
+    return await _run_query_async(
+        query, mode, model, sources, language, incognito, files, fallback_to_auto
+    )
+
+
+@mcp.tool
+async def perplexity_ask(
+    query: str,
+    language: str = "en-US",
+    incognito: bool = False,
+    fallback_to_auto: bool = True,
+) -> Dict[str, Any]:
+    """
+    Ask Perplexity a concise general-purpose question using auto mode.
+
+    Use this as the default low-cost entry point for factual questions, quick explanations,
+    summaries, definitions, and everyday lookups where a full Pro search is unnecessary.
+    It does not accept model selection, source filtering, or file uploads; use search/research
+    when those controls matter.
+    """
+    return await _run_query_async(
+        query,
+        "auto",
+        None,
+        None,
+        language,
+        incognito,
+        None,
+        fallback_to_auto,
+    )
+
+
+@mcp.tool
+async def perplexity_search(
+    query: str,
+    language: str = "en-US",
+    incognito: bool = False,
+    fallback_to_auto: bool = True,
+) -> Dict[str, Any]:
+    """
+    Search the web with Perplexity Pro and return a synthesized answer with sources.
+
+    Use this for current events, recent developments, web-backed fact checking, and queries
+    where citations or source links are important. It searches web sources with the default
+    Pro model; use search when you need another model, scholar/social sources, or file input.
+    """
+    return await _run_query_async(
+        query,
+        "pro",
+        None,
+        ["web"],
+        language,
+        incognito,
+        None,
+        fallback_to_auto,
+    )
+
+
+@mcp.tool
+async def perplexity_reason(
+    query: str,
+    language: str = "en-US",
+    incognito: bool = False,
+    fallback_to_auto: bool = True,
+) -> Dict[str, Any]:
+    """
+    Ask Perplexity to reason through a complex problem using the default reasoning model.
+
+    Use this for multi-step analysis, debugging hypotheses, tradeoff decisions, math or logic
+    problems, and questions where reasoning quality matters more than speed. Use research when
+    you need to choose a specific reasoning model or include files/sources.
+    """
+    return await _run_query_async(
+        query,
+        "reasoning",
+        None,
+        None,
+        language,
+        incognito,
+        None,
+        fallback_to_auto,
+    )
+
+
+@mcp.tool
+async def perplexity_research(
+    query: str,
+    language: str = "en-US",
+    incognito: bool = False,
+    fallback_to_auto: bool = True,
+) -> Dict[str, Any]:
+    """
+    Conduct deeper Perplexity research for broad or high-effort investigation tasks.
+
+    Use this when the user asks for a comprehensive report, topic survey, market or technical
+    research, or a synthesis that benefits from multi-step exploration. It can be slow; use
+    perplexity_ask or perplexity_search for quick answers.
+    """
+    return await _run_query_async(
+        query,
+        "deep research",
+        None,
+        None,
+        language,
+        incognito,
+        None,
+        fallback_to_auto,
     )
 
 
@@ -167,44 +292,53 @@ def toggle_builtin_tools(action: str = "status") -> str:
     DENY_TOOLS = ["WebFetch", "WebSearch"]
 
     if action in ("on", "enable"):
-        return json.dumps({
-            "action": "block_builtin_tools",
-            "instruction": (
-                f"请在本地执行以下操作：\n"
-                f"1. 读取 {SETTINGS_FILE} 文件\n"
-                f"2. 在 JSON 中找到或创建 permissions.deny 数组\n"
-                f"3. 将 {DENY_TOOLS} 添加到 deny 数组中（如果不存在）\n"
-                f"4. 写回文件\n"
-                f"这将禁用 Claude Code 内置的 WebSearch/WebFetch，"
-                f"后续搜索将使用 perplexity-mcp 的 search/research 工具。"
-            ),
-            "target_file": SETTINGS_FILE,
-            "tools_to_deny": DENY_TOOLS,
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "action": "block_builtin_tools",
+                "instruction": (
+                    f"请在本地执行以下操作：\n"
+                    f"1. 读取 {SETTINGS_FILE} 文件\n"
+                    f"2. 在 JSON 中找到或创建 permissions.deny 数组\n"
+                    f"3. 将 {DENY_TOOLS} 添加到 deny 数组中（如果不存在）\n"
+                    f"4. 写回文件\n"
+                    f"这将禁用 Claude Code 内置的 WebSearch/WebFetch，"
+                    f"后续搜索将使用 perplexity-mcp 的 search/research 工具。"
+                ),
+                "target_file": SETTINGS_FILE,
+                "tools_to_deny": DENY_TOOLS,
+            },
+            ensure_ascii=False,
+        )
 
     elif action in ("off", "disable"):
-        return json.dumps({
-            "action": "unblock_builtin_tools",
-            "instruction": (
-                f"请在本地执行以下操作：\n"
-                f"1. 读取 {SETTINGS_FILE} 文件\n"
-                f"2. 从 permissions.deny 数组中移除 {DENY_TOOLS}\n"
-                f"3. 写回文件\n"
-                f"这将恢复 Claude Code 内置的 WebSearch/WebFetch 工具。"
-            ),
-            "target_file": SETTINGS_FILE,
-            "tools_to_deny": DENY_TOOLS,
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "action": "unblock_builtin_tools",
+                "instruction": (
+                    f"请在本地执行以下操作：\n"
+                    f"1. 读取 {SETTINGS_FILE} 文件\n"
+                    f"2. 从 permissions.deny 数组中移除 {DENY_TOOLS}\n"
+                    f"3. 写回文件\n"
+                    f"这将恢复 Claude Code 内置的 WebSearch/WebFetch 工具。"
+                ),
+                "target_file": SETTINGS_FILE,
+                "tools_to_deny": DENY_TOOLS,
+            },
+            ensure_ascii=False,
+        )
 
     else:
-        return json.dumps({
-            "action": "check_status",
-            "instruction": (
-                f"请在本地执行以下操作：\n"
-                f"1. 读取 {SETTINGS_FILE} 文件\n"
-                f"2. 检查 permissions.deny 数组中是否包含 {DENY_TOOLS}\n"
-                f"3. 告知用户当前内置搜索工具的启用/禁用状态。"
-            ),
-            "target_file": SETTINGS_FILE,
-            "tools_to_check": DENY_TOOLS,
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "action": "check_status",
+                "instruction": (
+                    f"请在本地执行以下操作：\n"
+                    f"1. 读取 {SETTINGS_FILE} 文件\n"
+                    f"2. 检查 permissions.deny 数组中是否包含 {DENY_TOOLS}\n"
+                    f"3. 告知用户当前内置搜索工具的启用/禁用状态。"
+                ),
+                "target_file": SETTINGS_FILE,
+                "tools_to_check": DENY_TOOLS,
+            },
+            ensure_ascii=False,
+        )

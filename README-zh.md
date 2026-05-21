@@ -19,6 +19,7 @@
 <img width="1894" height="989" alt="image" src="https://github.com/user-attachments/assets/4a495432-8305-4820-8b4a-d7e54986ba45" />
 
 ## 更新记录
++ **2026-05-21**：v1.9.5 — 新增 Agent 友好的 MCP 快捷工具，覆盖快速问答、网页搜索、推理和深度研究，并完善工具说明与测试。
 + **2026-03-10**：v1.9.4 — 收敛支持模型集合：新增 GPT-5.4 / GPT-5.4 Thinking，移除 GPT-5.2 与 Grok 4.1 相关变体，并同步 MCP、OpenAI 模型暴露、测试与文档。
 + **2026-02-20**：v1.9.1 — 修复前端版本号显示：同步 `package.json` 版本，使管理面板正确显示 `MANAGER_vX.X.X`。
 + **2026-02-20**：v1.9.0 — Playground 文件附件改进：支持剪切板图片粘贴（Ctrl+V）；图片文件在输入框中显示缩略图预览。
@@ -190,6 +191,18 @@ PPLX_ADMIN_TOKEN=your-admin-token
 }
 ```
 
+### MCP 工具
+
+| 工具 | 适用场景 |
+|------|----------|
+| `perplexity_ask` | 普通快速问答，使用低成本 auto 模式 |
+| `perplexity_search` | 需要当前网页信息和来源链接的 Pro 搜索 |
+| `perplexity_reason` | 需要多步分析的推理问题 |
+| `perplexity_research` | 更慢但更全面的深度研究 |
+| `search` | 可配置 auto/pro、模型、来源、语言、文件和回退策略的搜索 |
+| `research` | 可配置 reasoning/deep research、模型、来源、语言、文件和回退策略的研究 |
+| `list_models` | 查看支持的模式和模型映射 |
+
 ## OpenAI 兼容端点
 
 ### 使用方式
@@ -268,7 +281,7 @@ perplexity/
 │   ├── __init__.py          # 包入口，导出主要组件
 │   ├── main.py              # 服务启动入口
 │   ├── app.py               # FastMCP 应用实例、认证中间件、核心查询逻辑
-│   ├── mcp.py               # MCP 工具定义 (list_models, search, research)
+│   ├── mcp.py               # MCP 工具定义和 Agent 友好别名
 │   ├── oai.py               # OpenAI 兼容 API (/v1/models, /v1/chat/completions)
 │   ├── admin.py             # 管理端点 (健康检查、号池管理、心跳控制)
 │   ├── utils.py             # 服务器专用工具函数 (验证、OAI模型映射)

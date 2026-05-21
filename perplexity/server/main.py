@@ -7,13 +7,22 @@ import argparse
 
 # Initialize logging before importing other modules
 from ..logger import setup_logger
+
 setup_logger()
 
 from .app import mcp, get_pool
 
 # Import route modules to register tools and endpoints with the mcp instance
 # Must import the actual decorated functions to trigger registration
-from .mcp import list_models, search, research  # noqa: F401
+from .mcp import (  # noqa: F401
+    list_models,
+    perplexity_ask,
+    perplexity_reason,
+    perplexity_research,
+    perplexity_search,
+    research,
+    search,
+)
 from . import oai  # noqa: F401
 from . import admin  # noqa: F401
 
