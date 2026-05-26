@@ -52,6 +52,52 @@ API_BASE_URL = "https://www.perplexity.ai"
 API_VERSION = "2.18"
 API_TIMEOUT = 30
 
+# Search Request Timeouts (seconds)
+# Perplexity 的 SSE 响应总时长在不同模式下差异很大：
+#   - auto / pro / reasoning：通常 30~120s
+#   - deep research：常见 3~10 分钟，偶尔更久
+#
+# 真正生效的超时值由 ClientPool 在运行时根据下面的优先级决定：
+#   1) admin API /timeouts/config (会持久化进 token_pool_config.json)
+#   2) token_pool_config.json 里的 "timeouts" 段
+#   3) 环境变量 PPLX_SEARCH_TIMEOUT / PPLX_DEEP_RESEARCH_TIMEOUT / PPLX_FILE_UPLOAD_TIMEOUT
+#   4) 这里的内置默认值
+def _read_int_env(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None or not str(raw).strip():
+        return default
+    try:
+        value = int(raw)
+        return value if value > 0 else default
+    except (TypeError, ValueError):
+        return default
+
+
+# 内置兜底默认（最低优先级）
+DEFAULT_SEARCH_TIMEOUT: int = 300
+DEFAULT_DEEP_RESEARCH_TIMEOUT: int = 900
+DEFAULT_FILE_UPLOAD_TIMEOUT: int = 180
+
+# 环境变量覆盖（用于不依赖 ClientPool 的 fallback 路径，如匿名 Client）
+SEARCH_TIMEOUT: int = _read_int_env("PPLX_SEARCH_TIMEOUT", DEFAULT_SEARCH_TIMEOUT)
+DEEP_RESEARCH_TIMEOUT: int = _read_int_env(
+    "PPLX_DEEP_RESEARCH_TIMEOUT", DEFAULT_DEEP_RESEARCH_TIMEOUT
+)
+FILE_UPLOAD_TIMEOUT: int = _read_int_env(
+    "PPLX_FILE_UPLOAD_TIMEOUT", DEFAULT_FILE_UPLOAD_TIMEOUT
+)
+
+
+def get_search_timeout(mode: str) -> int:
+    """
+    Module-level fallback used when no per-call/per-pool override is provided.
+    Higher-priority sources (admin API, token_pool_config.json) are resolved by
+    ClientPool.get_search_timeout(mode).
+    """
+    if mode == "deep research":
+        return DEEP_RESEARCH_TIMEOUT
+    return SEARCH_TIMEOUT
+
 # Endpoints
 ENDPOINT_AUTH_SESSION = f"{API_BASE_URL}/api/auth/session"
 ENDPOINT_AUTH_SIGNIN = f"{API_BASE_URL}/api/auth/signin/email"

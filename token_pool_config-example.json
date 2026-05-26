@@ -9,6 +9,11 @@
   "fallback": {
     "fallback_to_auto": true
   },
+  "timeouts": {
+    "search": 300,
+    "deep_research": 900,
+    "file_upload": 180
+  },
   "tokens": [
     {
 "id": "meralanalex",

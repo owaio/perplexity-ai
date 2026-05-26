@@ -140,6 +140,19 @@ class ClientPool:
         self._incognito_config: Dict[str, Any] = {
             "enabled": False
         }
+        # Timeouts configuration (seconds). Defaults come from env vars / built-in defaults.
+        # Loaded from token_pool_config.json["timeouts"] if present, then can be hot-updated
+        # via admin API /timeouts/config (which also persists back to the JSON file).
+        from ..config import (
+            SEARCH_TIMEOUT as _SEARCH_TIMEOUT_DEFAULT,
+            DEEP_RESEARCH_TIMEOUT as _DEEP_RESEARCH_TIMEOUT_DEFAULT,
+            FILE_UPLOAD_TIMEOUT as _FILE_UPLOAD_TIMEOUT_DEFAULT,
+        )
+        self._timeouts_config: Dict[str, Any] = {
+            "search": _SEARCH_TIMEOUT_DEFAULT,
+            "deep_research": _DEEP_RESEARCH_TIMEOUT_DEFAULT,
+            "file_upload": _FILE_UPLOAD_TIMEOUT_DEFAULT,
+        }
         self._heartbeat_task: Optional[asyncio.Task] = None
         self._config_path: Optional[str] = None
 
@@ -218,6 +231,14 @@ class ClientPool:
             self._incognito_config = {
                 "enabled": incognito.get("enabled", False)
             }
+
+        # Load timeouts configuration if present
+        # 优先级: config json > env var > 内置默认（env/默认在 __init__ 已写入 self._timeouts_config）
+        timeouts = config.get("timeouts")
+        if timeouts and isinstance(timeouts, dict):
+            self._timeouts_config = self._sanitize_timeouts(
+                timeouts, base=self._timeouts_config
+            )
 
         tokens = config.get("tokens", [])
         if not tokens:
@@ -719,6 +740,88 @@ class ClientPool:
                 return {"status": "error", "message": f"Failed to save config: {e}"}
 
         return {"status": "ok", "config": self._incognito_config.copy()}
+
+    # ==================== Timeouts Methods ====================
+
+    # Allowed keys mapped to (json_key, min_seconds)
+    _TIMEOUT_KEYS = {
+        "search": 10,
+        "deep_research": 10,
+        "file_upload": 10,
+    }
+
+    def _sanitize_timeouts(
+        self, raw: Dict[str, Any], base: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Validate and coerce a timeouts dict.
+
+        - Unknown keys are ignored.
+        - Non-positive / non-int values fall back to `base` (current config).
+        - Values are clamped to a sensible minimum so the server can't be
+          configured into a useless 0/1 second timeout by mistake.
+        """
+        merged = dict(base) if base else {}
+        for key, min_seconds in self._TIMEOUT_KEYS.items():
+            if key not in raw:
+                continue
+            value = raw[key]
+            try:
+                value_int = int(value)
+            except (TypeError, ValueError):
+                continue
+            if value_int < min_seconds:
+                continue
+            merged[key] = value_int
+        return merged
+
+    def get_timeouts_config(self) -> Dict[str, Any]:
+        """Return the currently active timeouts configuration."""
+        return self._timeouts_config.copy()
+
+    def get_search_timeout(self, mode: str) -> int:
+        """
+        Return the request timeout (seconds) for the given search mode,
+        honoring runtime / config overrides.
+        """
+        if mode == "deep research":
+            return int(self._timeouts_config.get("deep_research") or 0) or 900
+        return int(self._timeouts_config.get("search") or 0) or 300
+
+    def get_file_upload_timeout(self) -> int:
+        return int(self._timeouts_config.get("file_upload") or 0) or 180
+
+    def update_timeouts_config(self, new_config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Update timeouts configuration and persist to the config file (if loaded
+        from one). Same pattern as fallback/incognito.
+        """
+        if not isinstance(new_config, dict):
+            return {"status": "error", "message": "Body must be a JSON object"}
+
+        sanitized = self._sanitize_timeouts(new_config, base=self._timeouts_config)
+        if sanitized == self._timeouts_config:
+            return {"status": "ok", "config": self._timeouts_config.copy(),
+                    "message": "No valid changes applied"}
+
+        self._timeouts_config = sanitized
+
+        if self._config_path and os.path.exists(self._config_path):
+            try:
+                with open(self._config_path, "r", encoding="utf-8") as f:
+                    config = json.load(f)
+
+                config["timeouts"] = self._timeouts_config.copy()
+
+                with open(self._config_path, "w", encoding="utf-8") as f:
+                    json.dump(config, f, ensure_ascii=False, indent=2)
+
+                logger.info(f"Timeouts config saved to {self._config_path}")
+            except Exception as e:
+                logger.error(f"Failed to save timeouts config: {e}")
+                return {"status": "error", "message": f"Failed to save config: {e}"}
+
+        return {"status": "ok", "config": self._timeouts_config.copy()}
 
     async def _send_telegram_notification(self, message: str) -> None:
         """Send a notification to Telegram."""
