@@ -256,6 +256,8 @@ def run_query(
                 stream=False,
                 language=language,
                 incognito=incognito,
+                timeout=pool.get_search_timeout(mode),
+                file_upload_timeout=pool.get_file_upload_timeout(),
             )
 
             # Success
@@ -323,6 +325,8 @@ def run_query(
                 stream=False,
                 language=language,
                 incognito=incognito,
+                timeout=pool.get_search_timeout("auto"),
+                file_upload_timeout=pool.get_file_upload_timeout(),
             )
 
             if response and "answer" in response:
@@ -357,6 +361,8 @@ def run_query(
                 stream=False,
                 language=language,
                 incognito=True,
+                timeout=pool.get_search_timeout("auto"),
+                file_upload_timeout=pool.get_file_upload_timeout(),
             )
 
             if response and "answer" in response:

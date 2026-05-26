@@ -29,7 +29,14 @@ MCP_BASE_URL = "http://127.0.0.1:8000/mcp"
 MCP_TOKEN = os.getenv("MCP_TOKEN", "sk-123456")
 
 # 超时配置（秒）
-CALL_TOOL_TIMEOUT = 120
+# Perplexity 不同模式耗时差异较大：
+#   - search (pro):   ~30-120s
+#   - research:       ~60-300s
+#   - deep research:  可能 5-15 分钟
+# 测试侧给出充足上限，避免被客户端等待先掐断。
+SEARCH_CALL_TIMEOUT = int(os.getenv("PPLX_TEST_SEARCH_TIMEOUT", "300"))
+RESEARCH_CALL_TIMEOUT = int(os.getenv("PPLX_TEST_RESEARCH_TIMEOUT", "900"))
+CALL_TOOL_TIMEOUT = SEARCH_CALL_TIMEOUT  # 兼容历史引用
 
 # 测试问题
 SEARCH_QUESTION = "When is the upcoming Chinese New Year"
@@ -183,10 +190,10 @@ class TestSearchMode:
         async with client:
             try:
                 result = await asyncio.wait_for(
-                    client.call_tool("search", arguments), timeout=CALL_TOOL_TIMEOUT
+                    client.call_tool("search", arguments), timeout=SEARCH_CALL_TIMEOUT
                 )
             except asyncio.TimeoutError:
-                pytest.fail(f"search 调用超时 ({CALL_TOOL_TIMEOUT}s)，模型: {model_name}")
+                pytest.fail(f"search 调用超时 ({SEARCH_CALL_TIMEOUT}s)，模型: {model_name}")
             tool_result = parse_tool_result(result)
 
             # 验证返回结构
@@ -248,10 +255,10 @@ class TestResearchMode:
         async with client:
             try:
                 result = await asyncio.wait_for(
-                    client.call_tool("research", arguments), timeout=CALL_TOOL_TIMEOUT
+                    client.call_tool("research", arguments), timeout=RESEARCH_CALL_TIMEOUT
                 )
             except asyncio.TimeoutError:
-                pytest.fail(f"research 调用超时 ({CALL_TOOL_TIMEOUT}s)，模型: {model_name}")
+                pytest.fail(f"research 调用超时 ({RESEARCH_CALL_TIMEOUT}s)，模型: {model_name}")
             tool_result = parse_tool_result(result)
 
             # 验证返回结构

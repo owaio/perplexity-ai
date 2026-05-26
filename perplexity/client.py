@@ -36,7 +36,9 @@ from .config import (
     ENDPOINT_AUTH_SIGNIN,
     ENDPOINT_SSE_ASK,
     ENDPOINT_UPLOAD_URL,
+    FILE_UPLOAD_TIMEOUT,
     SOCKS_PROXY,
+    get_search_timeout,
 )
 from .emailnator import Emailnator
 
@@ -181,6 +183,8 @@ class Client:
         language="en-US",
         follow_up=None,
         incognito=False,
+        timeout=None,
+        file_upload_timeout=None,
     ):
         """
         Executes a search query on Perplexity AI.
@@ -270,7 +274,8 @@ class Client:
                 data=file,
             )
 
-            upload_resp = self.session.post(file_upload_info["s3_bucket_url"], multipart=mp, timeout=120)
+            upload_timeout = file_upload_timeout if file_upload_timeout and file_upload_timeout > 0 else FILE_UPLOAD_TIMEOUT
+            upload_resp = self.session.post(file_upload_info["s3_bucket_url"], multipart=mp, timeout=upload_timeout)
 
             if not upload_resp.ok:
                 raise Exception("File upload error", upload_resp)
@@ -325,7 +330,10 @@ class Client:
         }
 
         # Send the query request and handle the response
-        resp = self.session.post(ENDPOINT_SSE_ASK, json=json_data, stream=True, timeout=120)
+        # 不同模式耗时差异巨大（deep research 经常需要数分钟）。
+        # 优先使用调用方显式传入的 timeout（由 ClientPool 注入），否则按 mode 兜底。
+        request_timeout = timeout if timeout and timeout > 0 else get_search_timeout(mode)
+        resp = self.session.post(ENDPOINT_SSE_ASK, json=json_data, stream=True, timeout=request_timeout)
         chunks = []
 
         def stream_response(resp):
