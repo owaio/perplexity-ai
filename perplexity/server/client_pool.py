@@ -743,11 +743,14 @@ class ClientPool:
 
     # ==================== Timeouts Methods ====================
 
-    # Allowed keys mapped to (json_key, min_seconds)
+    # Allowed timeout keys -> minimum acceptable seconds.
+    # Mirrors `MIN_TIMEOUT_SECONDS` enforced for env vars in perplexity.config,
+    # so a too-small value is rejected the same way regardless of source.
+    from ..config import MIN_TIMEOUT_SECONDS as _MIN_TIMEOUT_SECONDS
     _TIMEOUT_KEYS = {
-        "search": 10,
-        "deep_research": 10,
-        "file_upload": 10,
+        "search": _MIN_TIMEOUT_SECONDS,
+        "deep_research": _MIN_TIMEOUT_SECONDS,
+        "file_upload": _MIN_TIMEOUT_SECONDS,
     }
 
     def _sanitize_timeouts(

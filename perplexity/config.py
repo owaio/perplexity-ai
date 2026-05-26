@@ -62,15 +62,34 @@ API_TIMEOUT = 30
 #   2) token_pool_config.json 里的 "timeouts" 段
 #   3) 环境变量 PPLX_SEARCH_TIMEOUT / PPLX_DEEP_RESEARCH_TIMEOUT / PPLX_FILE_UPLOAD_TIMEOUT
 #   4) 这里的内置默认值
-def _read_int_env(name: str, default: int) -> int:
+
+# 共享下限：env / json / admin API 三条路径都用同一个守卫，避免一处放行另一处拦截
+MIN_TIMEOUT_SECONDS: int = 10
+
+
+def _read_int_env(name: str, default: int, min_value: int = MIN_TIMEOUT_SECONDS) -> int:
+    """
+    Read a positive integer from env. Values below `min_value` are rejected and
+    fall back to `default` so e.g. `PPLX_SEARCH_TIMEOUT=1` (typo) doesn't make
+    every request fail almost immediately.
+    """
     raw = os.getenv(name)
     if raw is None or not str(raw).strip():
         return default
     try:
         value = int(raw)
-        return value if value > 0 else default
     except (TypeError, ValueError):
+        _logger.warning(
+            "Ignoring %s=%r: not an integer; using default %d", name, raw, default
+        )
         return default
+    if value < min_value:
+        _logger.warning(
+            "Ignoring %s=%d: below minimum %ds; using default %d",
+            name, value, min_value, default,
+        )
+        return default
+    return value
 
 
 # 内置兜底默认（最低优先级）
