@@ -1,0 +1,25 @@
+{
+  "heart_beat": {
+    "enable": false,
+    "question": "今天是几号？",
+    "interval": 6,
+    "tg_bot_token": "your-telegram-bot-token",
+    "tg_chat_id": "your-telegram-chat-id"
+  },
+  "fallback": {
+    "fallback_to_auto": true
+  },
+  "timeouts": {
+    "search": 300,
+    "deep_research": 900,
+    "file_upload": 180
+  },
+  "tokens": [
+    {
+"id": "shgjtq2myb91801",
+    "csrf_token": "fc3d13042c2455c04c044c4344fd08c54e79fcbb427d7687d3291e4602e3a23a%7C7ee5ecd8ccda975a449b788c13f7b02af163735d96ccb12ebe767f08f11fa9eb",
+    "session_token": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..UKOq1DJFC0h5vuqv.yvFfRrAbbB0smJfIK9Mbkhzzno1Bu_VEmiw6XkRMP9kEvlKm4P46Xm5NMbKZCKnS2aHQn4-E1mzhjdxkmQtV2UNvNYyjqWc2XlUFVwWoofy664iRLpDDBrbs8GD39svs4tX2dXaD3st78wfIAlHYWsHjCD2EHeSoGj3qbZetOHNlllnvt_F2dCLQsPHdU1FpgFZdkHD51KDK-CVwDmVgHr55r13ZhBxBCXNFVe3qWCWnJW9c7Xf-4jX5kEsmU1Pvn5-xFzzFJKSXUZRinUdwtg.pR8y6DLcKEpyHdUAc1gMaw"
+  
+    }
+  ]
+}
