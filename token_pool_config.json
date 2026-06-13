@@ -7,7 +7,7 @@
     "tg_chat_id": "your-telegram-chat-id"
   },
   "fallback": {
-    "fallback_to_auto": true
+    "fallback_to_auto": false
   },
   "timeouts": {
     "search": 300,
